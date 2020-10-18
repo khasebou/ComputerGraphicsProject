@@ -180,6 +180,21 @@ vec3 rot_z(vec3 p, float a)
     );
 }
 
+/* UV sampling
+*/
+vec2 getUV(vec3 p, vec3 n){ 
+    vec3 m = abs(n);      
+
+    if(m.x >= m.y && m.x >= m.z){ 
+        return p.yz*0.25; 
+    } 
+    else if(m.y > m.x && m.y >= m.z){ 
+        return p.xz*0.25; 
+    } 
+    else{ 
+        return p.xy*0.25; 
+    } 
+} 
 
 /* Each object has a distance function and a material function. The distance
  * function evaluates the distance field of the object at a given point, and
@@ -247,8 +262,17 @@ material room_material(vec3 p)
     mat.diffuse = vec3(0.740,0.733,0.309);
     mat.specular = vec3(0.750,0.643,0.750);
 
-    vec2 pixelLocation = gl_FragCoord.xy / 512.f - floor(gl_FragCoord.xy / 512.f);
-    vec4 pixelTextureVal = texture(brickWallTexture, pixelLocation);
+    vec3 eps = vec3(0.001, 0.0, 0.0);
+    vec3 pNorm = normalize(vec3(
+        room_distance(p+eps.xyy)-room_distance(p-eps.xyy),
+        room_distance(p+eps.yxy)-room_distance(p-eps.yxy),
+        room_distance(p+eps.yyx)-room_distance(p-eps.yyx)
+    ));
+
+    vec2 samplingLoc= getUV(p, pNorm);
+
+    //vec2 pixelLocation = gl_FragCoord.xy / 512.f - floor(gl_FragCoord.xy / 512.f);
+    vec4 pixelTextureVal = texture(brickWallTexture, samplingLoc);
     
     if(p.x <= -2.98){
     	mat.color.rgb = pixelTextureVal.xyz; 
