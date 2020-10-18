@@ -90,6 +90,7 @@ struct material
 	// The color of the surface
 	vec4 color;
 	// PHONG shading params
+    bool use_phong_shading;
 	vec3 diffuse;
 	vec3 specular;
 	float diffuse_intensity;
@@ -193,6 +194,14 @@ material blob_material(vec3 p)
 {
     material mat;
     mat.color = vec4(1.0, 0.5, 0.3, 0.0);
+    
+    mat.use_phong_shading = true;
+    mat.shininess = 0.2;
+    mat.specular_intensity = 0.288;
+    mat.diffuse_intensity = 0.5;
+    mat.diffuse = vec3(0.740,0.733,0.309);
+    mat.specular = vec3(0.750,0.643,0.750);
+
     return mat;
 }
 
@@ -205,13 +214,21 @@ material sphere_material(vec3 p)
 {
     material mat;
     mat.color = vec4(0.1, 0.2, 0.0, 1.0);
+
+	mat.use_phong_shading = true;
+    mat.shininess = 0.2;
+    mat.specular_intensity = 0.288;
+    mat.diffuse_intensity = 0.5;
+    mat.diffuse = vec3(0.740,0.733,0.309);
+    mat.specular = vec3(0.750,0.643,0.750);
+
     return mat;
 }
 
 float room_distance(vec3 p)
 {
     return max(
-        -box(p-vec3(0.0,3.0,3.0), vec3(0.5, 0.5, 0.5)),
+        -box(p-vec3(0.0,3.1,3.0), vec3(0.5, 0.5, 0.5)),
         -box(p-vec3(0.0,0.0,0.0), vec3(3.0, 3.0, 6.0))
     );
 }
@@ -220,6 +237,14 @@ material room_material(vec3 p)
 {
     material mat;
     mat.color = vec4(1.0, 1.0, 1.0, 1.0);
+    
+    mat.use_phong_shading = true;
+    mat.shininess = 0.2;
+    mat.specular_intensity = 0.288;
+    mat.diffuse_intensity = 0.5;
+    mat.diffuse = vec3(0.740,0.733,0.309);
+    mat.specular = vec3(0.750,0.643,0.750);
+
     if(p.x <= -2.98) mat.color.rgb = vec3(1.0, 0.0, 0.0);
     else if(p.x >= 2.98) mat.color.rgb = vec3(0.0, 1.0, 0.0);
     return mat;
@@ -234,6 +259,14 @@ material crate_material(vec3 p)
 {
     material mat;
     mat.color = vec4(1.0, 1.0, 1.0, 1.0);
+
+    mat.use_phong_shading = true;
+    mat.shininess = 0.2;
+    mat.specular_intensity = 0.288;
+    mat.diffuse_intensity = 0.5;
+    mat.diffuse = vec3(0.740,0.733,0.309);
+    mat.specular = vec3(0.750,0.643,0.750);
+
 
     vec3 q = rot_y(p-vec3(-1,-1,5), u_time) * 0.98;
     if(fract(q.x + floor(q.y*2.0) * 0.5 + floor(q.z*2.0) * 0.5) < 0.5)
@@ -381,20 +414,23 @@ float GetLight(vec3 p, vec3 pNorm, vec3 lightPos, out bool inShadow) {
     return dif;
 }
 
-// vec3 shade(vec3 n, vec3 rd, vec3 ld, vec3 color){
-//     /*
-//     claculate the phong reflection model diffuse and specular term here!
-//     Hint: Check the lecture slides from the previous lecture
-//     */
-//     vec3 reflectedLightDirection = reflect(ld, n);
+vec3 shade(vec3 n, vec3 rd, vec3 ld, vec3 color, material mat){
+    /*
+    claculate the phong reflection model diffuse and specular term here!
+    Hint: Check the lecture slides from the previous lecture
+    */
+    vec3 reflectedLightDirection = reflect(ld, n);
     
-//     vec3 defuse = DIFFUSE  * DIFFUSE_INTENSITY * dot(normalize(ld), normalize(n));
-// 	vec3 spec = SPECULAR * SPECULAR_INTENSITY * pow(
-//         dot(normalize(reflectedLightDirection), normalize(rd)), 
-//         SHININESS );
+    vec3 defuse = mat.diffuse  * mat.diffuse_intensity * 
+    	dot(normalize(ld), normalize(n));
+	
+	vec3 spec = mat.specular * mat.specular_intensity * pow(
+        	dot(normalize(reflectedLightDirection), normalize(rd)), 
+        	mat.shininess 
+   	);
     
-//     return color + defuse + spec;
-// }
+    return color + defuse + spec;
+}
 
 /* Calculates the color of the pixel, based on view ray origin and direction.
  *
@@ -419,19 +455,20 @@ vec3 render(vec3 ro, vec3 rd)
     // Add some lighting code here!
     bool isInShadow;
 	vec3 color = mat.color.rgb * GetLight(p, n, lamp_pos, isInShadow);
-    //vec3 colorWithShading = !isInShadow ? shade(n, rd, normalize(lamp_pos-p), colorWithShadow) : colorWithShadow;
-    // if(!isInShadow){
-    //     // put different specular terms for different components
-    //     color = shade(n, rd, normalize(lamp_pos-p), color);
-    // }
-    return color; //;lmat.color.rgb * GetLight(p, n, lamp_pos);
+    
+	if(!isInShadow)
+	{
+		color = shade(n, rd, normalize(lamp_pos-p), color, mat);
+	}
+
+    return color;
 }
 
 
 void main()
 {
-	bool rotateCamera = true;
-	bool moveCamera = true;
+	bool rotateCamera = false;
+	bool moveCamera = false;
     
     // This is the position of the pixel in normalized device coordinates.
     vec2 uv = (gl_FragCoord.xy/u_resolution)*2.0-1.0;
