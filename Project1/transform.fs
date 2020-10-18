@@ -82,6 +82,8 @@ uniform vec2 u_mouse;
 // Time since startup, in seconds
 uniform float u_time;
 
+// texture samplers
+uniform sampler2D brickWallTexture;
 
 // materials
 
@@ -245,8 +247,17 @@ material room_material(vec3 p)
     mat.diffuse = vec3(0.740,0.733,0.309);
     mat.specular = vec3(0.750,0.643,0.750);
 
-    if(p.x <= -2.98) mat.color.rgb = vec3(1.0, 0.0, 0.0);
-    else if(p.x >= 2.98) mat.color.rgb = vec3(0.0, 1.0, 0.0);
+    vec2 pixelLocation = gl_FragCoord.xy / 512.f - floor(gl_FragCoord.xy / 512.f);
+    vec4 pixelTextureVal = texture(brickWallTexture, pixelLocation);
+    
+    if(p.x <= -2.98){
+    	mat.color.rgb = pixelTextureVal.xyz; 
+    	//vec3(1.0, 0.0, 0.0);	
+    } 
+    else if(p.x >= 2.98){
+    	//mat.color.rgb = vec3(0.0, 1.0, 0.0);
+    	mat.color.rgb = pixelTextureVal.xyz;
+    }
     return mat;
 }
 
