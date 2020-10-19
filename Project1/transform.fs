@@ -267,11 +267,11 @@ material room_material(vec3 p)
     
     mat.supportsNormalMapping = false;
     mat.use_phong_shading = true;
-    mat.shininess = 2;
+    mat.shininess = 1;
     mat.specular_intensity = 0.288;
     mat.diffuse_intensity = 0.5;
-    mat.diffuse = vec3(0.740,0.733,0.309);
-    mat.specular = vec3(0.750,0.643,0.750);
+    mat.diffuse = vec3(0.2, 0.2, 0.1);//vec3(0.740,0.733,0.309);
+    mat.specular = vec3(0.2, 0.2, 0.1);//vec3(0.750,0.643,0.750);
 
     vec3 eps = vec3(0.001, 0.0, 0.0);
     vec3 pNorm = normalize(vec3(
@@ -445,7 +445,7 @@ bool intersect(
 float GetLight(vec3 p, vec3 pNorm, vec3 lightPos, out bool inShadow) {
     vec3 l = normalize(lightPos-p);
     
-    float dif = clamp(dot(pNorm, l), 0., 1.);
+    float dif = dot(pNorm, l);
     
 	material mat;
 	vec3 p1, n1;
@@ -495,11 +495,18 @@ vec3 render(vec3 ro, vec3 rd)
     // This lamp is positioned at the hole in the roof.
     vec3 lamp_pos = vec3(0.0, 3.0, 3.0);
 
-    vec3 p, n;
+    vec3 p, n, n1;
     material mat;
 
     // Compute intersection point along the view ray.
     intersect(ro, rd, MAX_DIST, p, n, mat, false);
+
+    if(mat.supportsNormalMapping && p.x < 0.f)
+    {
+        mat3 tbn = mat3(left_wall_tangent, left_wall_bitangent, normalize(n));
+        n = tbn * (mat.surfaceNormalAtPoint * 2.0 - 1.0);
+        n = normalize(n);
+    }
 
     // Add some lighting code here!
     bool isInShadow;
@@ -510,12 +517,12 @@ vec3 render(vec3 ro, vec3 rd)
 		color = shade(n, rd, normalize(lamp_pos-p), color, mat);
 	}
 
-    if(mat.supportsNormalMapping && p.x < 0.f)
-    {
-        //mat3 tbn = mat3(left_wall_tangent, left_wall_bitangent, normalize(n));
-        //n = tbn * (mat.surfaceNormalAtPoint * 2.0 - 1.0);
-        color = left_wall_tangent;//normalize(n);
-    }
+    // if(mat.supportsNormalMapping && p.x < 0.f)
+    // {
+    //     mat3 tbn = mat3(left_wall_tangent, left_wall_bitangent, normalize(n));
+    //     n = transpose(tbn) * (mat.surfaceNormalAtPoint * 2.0 - 1.0);
+    //     color = normalize(n);//
+    // }
 
     return color;
 }
@@ -524,7 +531,7 @@ vec3 render(vec3 ro, vec3 rd)
 void main()
 {
 	bool rotateCamera = false;
-	bool moveCamera = false;
+	bool moveCamera = true;
     
     // This is the position of the pixel in normalized device coordinates.
     vec2 uv = (gl_FragCoord.xy/u_resolution)*2.0-1.0;
@@ -533,14 +540,14 @@ void main()
 
     // Modify these two to create perspective projection!
     // Origin of the view ray
-    vec3 ro = vec3(vec2(uv.x * aspect, uv.y), -3.0);
+    vec3 ro = vec3(3, 0, 0); //vec2(uv.x * aspect, uv.y)
 	// Direction of the view ray
-    vec3 rd = vec3(uv.x,uv.y,1);
+    vec3 rd = vec3(-1, uv.y, uv.x);
 
     if(moveCamera)
     {
-    	ro.z += sin(u_time / 2.) * 2;
-    	ro.x += cos(u_time / 2.) * 2;
+    	//ro.z += sin(u_time / 2.) * 2;
+    	//ro.x += cos(u_time / 2.) * 2;
     }
 
     if(rotateCamera)
