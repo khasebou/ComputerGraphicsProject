@@ -48,7 +48,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="wall.jpg">
+    <Image Include="Brick_Wall_Texture.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Brick_Wall_Texture_NORMAL.jpg">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

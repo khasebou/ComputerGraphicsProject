@@ -1,6 +1,4 @@
 #version 330
-
-
 // Tampere University
 // COMP.CE.430 Computer Graphics Coding Assignment 2020
 //
@@ -84,6 +82,13 @@ uniform float u_time;
 
 // texture samplers
 uniform sampler2D brickWallTexture;
+uniform sampler2D brickWallTextureNormal;
+
+uniform vec3 left_wall_tangent;
+uniform vec3 left_wall_bitangent;
+
+uniform vec3 right_wall_tangent;
+uniform vec3 right_wall_bitangent;
 
 // materials
 
@@ -98,6 +103,9 @@ struct material
 	float diffuse_intensity;
 	float specular_intensity;
 	float shininess;
+    // normal mapping
+    bool supportsNormalMapping;
+    vec3 surfaceNormalAtPoint;
 };
 
 
@@ -213,7 +221,8 @@ material blob_material(vec3 p)
     mat.color = vec4(1.0, 0.5, 0.3, 0.0);
     
     mat.use_phong_shading = true;
-    mat.shininess = 0.2;
+    mat.supportsNormalMapping = false;
+    mat.shininess = 2;
     mat.specular_intensity = 0.288;
     mat.diffuse_intensity = 0.5;
     mat.diffuse = vec3(0.740,0.733,0.309);
@@ -232,8 +241,9 @@ material sphere_material(vec3 p)
     material mat;
     mat.color = vec4(0.1, 0.2, 0.0, 1.0);
 
+    mat.supportsNormalMapping = false;
 	mat.use_phong_shading = true;
-    mat.shininess = 0.2;
+    mat.shininess = 2;
     mat.specular_intensity = 0.288;
     mat.diffuse_intensity = 0.5;
     mat.diffuse = vec3(0.740,0.733,0.309);
@@ -255,8 +265,9 @@ material room_material(vec3 p)
     material mat;
     mat.color = vec4(1.0, 1.0, 1.0, 1.0);
     
+    mat.supportsNormalMapping = false;
     mat.use_phong_shading = true;
-    mat.shininess = 0.2;
+    mat.shininess = 2;
     mat.specular_intensity = 0.288;
     mat.diffuse_intensity = 0.5;
     mat.diffuse = vec3(0.740,0.733,0.309);
@@ -272,13 +283,18 @@ material room_material(vec3 p)
     vec2 samplingLoc= getUV(p, pNorm);
 
     //vec2 pixelLocation = gl_FragCoord.xy / 512.f - floor(gl_FragCoord.xy / 512.f);
-    vec4 pixelTextureVal = texture(brickWallTexture, samplingLoc);
+    vec4 pixelTextureVal = texture(brickWallTexture, samplingLoc.yx);
+    vec3 pixelTextureNormVal = texture(brickWallTextureNormal, samplingLoc.yx).xyz;
     
     if(p.x <= -2.98){
+        mat.supportsNormalMapping = true;
+        mat.surfaceNormalAtPoint = pixelTextureNormVal;
     	mat.color.rgb = pixelTextureVal.xyz; 
     	//vec3(1.0, 0.0, 0.0);	
     } 
     else if(p.x >= 2.98){
+        mat.supportsNormalMapping = false;
+        //mat.surfaceNormalAtPoint = pixelTextureNormVal;
     	//mat.color.rgb = vec3(0.0, 1.0, 0.0);
     	mat.color.rgb = pixelTextureVal.xyz;
     }
@@ -294,7 +310,7 @@ material crate_material(vec3 p)
 {
     material mat;
     mat.color = vec4(1.0, 1.0, 1.0, 1.0);
-
+    mat.supportsNormalMapping = false;
     mat.use_phong_shading = true;
     mat.shininess = 0.2;
     mat.specular_intensity = 0.288;
@@ -451,17 +467,15 @@ float GetLight(vec3 p, vec3 pNorm, vec3 lightPos, out bool inShadow) {
 
 vec3 shade(vec3 n, vec3 rd, vec3 ld, vec3 color, material mat){
     /*
-    claculate the phong reflection model diffuse and specular term here!
+    calculate the phong reflection model diffuse and specular term here!
     Hint: Check the lecture slides from the previous lecture
     */
     vec3 reflectedLightDirection = reflect(ld, n);
     
-    vec3 defuse = mat.diffuse  * mat.diffuse_intensity * 
-    	dot(normalize(ld), normalize(n));
+    vec3 defuse = mat.diffuse  * mat.diffuse_intensity * dot(normalize(ld), normalize(n));
 	
 	vec3 spec = mat.specular * mat.specular_intensity * pow(
-        	dot(normalize(reflectedLightDirection), normalize(rd)), 
-        	mat.shininess 
+		dot(normalize(reflectedLightDirection), normalize(rd)), mat.shininess 
    	);
     
     return color + defuse + spec;
@@ -490,11 +504,18 @@ vec3 render(vec3 ro, vec3 rd)
     // Add some lighting code here!
     bool isInShadow;
 	vec3 color = mat.color.rgb * GetLight(p, n, lamp_pos, isInShadow);
-    
+
 	if(!isInShadow)
 	{
 		color = shade(n, rd, normalize(lamp_pos-p), color, mat);
 	}
+
+    if(mat.supportsNormalMapping && p.x < 0.f)
+    {
+        //mat3 tbn = mat3(left_wall_tangent, left_wall_bitangent, normalize(n));
+        //n = tbn * (mat.surfaceNormalAtPoint * 2.0 - 1.0);
+        color = left_wall_tangent;//normalize(n);
+    }
 
     return color;
 }
