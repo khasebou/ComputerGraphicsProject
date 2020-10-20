@@ -16,7 +16,7 @@
 // Mandatory functionalities ----------------------------------------------------
 //   Perspective projection       | X  | 
 //   Phong shading                | X  | 
-//   Camera movement and rotation | -  | 
+//   Camera movement and rotation | X  | 
 //   Sharp shadows                | X  | 
 // Extra functionalities --------------------------------------------------------
 //   Tone mapping                 |    | 
@@ -38,7 +38,7 @@
 //   Advanced own SDF             |    | 
 //   Animated SDF                 |    | 
 //   Other?                       |    | 
-
+//   BLOOM                        |    |
 // constants
 
 #define PI 3.14159265359
@@ -231,6 +231,11 @@ float room_distance(vec3 p)
         -box(p-vec3(0.0,3.1,3.0), vec3(0.5, 0.5, 0.5)),
         -box(p-vec3(0.0,0.0,0.0), vec3(3.0, 3.0, 6.0))
     );
+    
+   // max(
+    //    -box(p-vec3(0.0,2.8,3.0), vec3(0.5, 3.0, 0.5)),
+   //     -box(p-vec3(0.0,0.0,0.0), vec3(3.0, 3.0, 6.0))
+   // );
 }
 
 material room_material(vec3 p)
@@ -443,7 +448,7 @@ vec3 shade(vec3 n, vec3 rd, vec3 ld, vec3 color, material mat){
 vec3 render(vec3 ro, vec3 rd)
 {
     // This lamp is positioned at the hole in the roof.
-    vec3 lamp_pos = vec3(0.0, 3.0, 3.0);
+    vec3 lamp_pos = vec3(0.0, 2.7, 3.0);
 
     vec3 p, n;
     material mat;
@@ -466,34 +471,26 @@ vec3 render(vec3 ro, vec3 rd)
 uniform vec3 cameraFront;
 uniform vec3 cameraPos;
 uniform vec3 cameraRotation;
-out vec4 FragColor;
+layout (location = 0) out vec4 FragColor;
+layout (location = 1) out vec4 BrightColor;
 
 void main()
-{
-	bool rotateCamera = false;
-	bool moveCamera = false;
-    
+{   
     // This is the position of the pixel in normalized device coordinates.
     vec2 uv = (gl_FragCoord.xy/u_resolution)*2.0-1.0;
     // Calculate aspect ratio
     float aspect = u_resolution.x/u_resolution.y;
 
-    // Modify these two to create perspective projection!
-    // Origin of the view ray
-    //vec3 cameraPos = vec3(vec2(0, 0), -3.0);
-	// Direction of the view ray
     vec3 rd = vec3(uv.x,uv.y,1);
     rd = rot_x(rd, cameraRotation.x);
     rd = rot_y(rd, cameraRotation.y);
-    // if(moveCamera)
-    // {
-    // 	cameraPos.z += sin(u_time / 2.) * 2;
-    // }
 
-    // if(rotateCamera)
-    // {
-    //     rd = rot_y(rd, u_time / 10.);
-    // }
-    
     FragColor = vec4(render(cameraPos, rd), 1.0);
+
+    if(dot(FragColor.rgb, vec3(0.2126, 0.7152, 0.0722)) > 1)
+    {
+        BrightColor = vec4(FragColor.rgb, 1.0);
+    }else{
+        BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
+    }
 }

@@ -153,10 +153,14 @@
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="transform.fs">
+    <None Include="BloomShader.fs" />
+    <None Include="BloomShader.vs" />
+    <None Include="GBlur.fs" />
+    <None Include="GBlur.vs" />
+    <None Include="SceneRender.fs">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </None>
-    <None Include="transform.vs">
+    <None Include="SceneRender.vs">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </None>

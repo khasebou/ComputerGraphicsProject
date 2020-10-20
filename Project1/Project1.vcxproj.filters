@@ -40,10 +40,22 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="transform.vs">
+    <None Include="GBlur.fs">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="transform.fs">
+    <None Include="GBlur.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="SceneRender.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="SceneRender.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="BloomShader.vs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="BloomShader.fs">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
