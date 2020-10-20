@@ -38,7 +38,7 @@
 //   Advanced own SDF             |    | 
 //   Animated SDF                 |    | 
 //   Other?                       |    | 
-//   BLOOM                        |    |
+//   BLOOM                        |  X |
 // constants
 
 #define PI 3.14159265359
@@ -96,6 +96,8 @@ struct material
 	float diffuse_intensity;
 	float specular_intensity;
 	float shininess;
+    // reflection
+    float reflectedPortion;
 };
 
 
@@ -201,6 +203,7 @@ material blob_material(vec3 p)
     mat.diffuse_intensity = 0.5;
     mat.diffuse = vec3(1.0, 0.5, 0.3);
     mat.specular = vec3(1.0, 1.0, 1.0);
+    mat.reflectedPortion = 0.0f;
 
     return mat;
 }
@@ -221,6 +224,7 @@ material sphere_material(vec3 p)
     mat.diffuse_intensity = 0.5;
     mat.diffuse = vec3(0.1, 0.2, 0.0);
     mat.specular = vec3(1.0, 1.0, 1.0);
+    mat.reflectedPortion = 0.0f;
 
     return mat;
 }
@@ -248,6 +252,7 @@ material room_material(vec3 p)
     mat.specular_intensity = 0.288;
     mat.diffuse_intensity = 0.5;
     mat.specular = vec3(0.8,0.8,0.8);
+    mat.reflectedPortion = 0.2f;
 
     if(p.x <= -2.98) mat.color.rgb = vec3(1.0, 0.0, 0.0);
     else if(p.x >= 2.98) mat.color.rgb = vec3(0.0, 1.0, 0.0);
@@ -273,7 +278,7 @@ material crate_material(vec3 p)
     mat.diffuse_intensity = 0.5;
     mat.diffuse = vec3(0.740,0.733,0.309);
     mat.specular = vec3(0.750,0.643,0.750);
-
+    mat.reflectedPortion = 0.0f;
 
     vec3 q = rot_y(p-vec3(-1,-1,5), u_time) * 0.98;
     if(fract(q.x + floor(q.y*2.0) * 0.5 + floor(q.z*2.0) * 0.5) < 0.5)
@@ -450,22 +455,62 @@ vec3 render(vec3 ro, vec3 rd)
     // This lamp is positioned at the hole in the roof.
     vec3 lamp_pos = vec3(0.0, 2.7, 3.0);
 
-    vec3 p, n;
+    vec3 firstP, firstN;
     material mat;
 
     // Compute intersection point along the view ray.
-    intersect(ro, rd, MAX_DIST, p, n, mat, false);
+    intersect(ro, rd, MAX_DIST, firstP, firstN, mat, false);
 
-    // Add some lighting code here!
-    bool isInShadow;
-	vec3 color = mat.color.rgb * GetLight(p, n, lamp_pos, isInShadow);
+    float lightIntensity = 1;
+    const int MAX_DETECTIONS = 2;
+    vec3 colorStack[MAX_DETECTIONS];
+    float colorWeight[MAX_DETECTIONS];
     
-	if(!isInShadow)
+    bool isInShadow;
+    colorStack[0] = mat.color.rgb * GetLight(firstP, firstN, lamp_pos, isInShadow);
+    colorWeight[0] = lightIntensity * (1 - mat.reflectedPortion);
+    if(!isInShadow)
 	{
-		color = shade(n, rd, normalize(lamp_pos-p), color, mat);
+		colorStack[0] = shade(firstN, rd, normalize(lamp_pos-firstP), colorStack[0], mat);
 	}
 
-    return color;
+    lightIntensity = lightIntensity * mat.reflectedPortion;
+    vec3 previousNormal = firstN;
+    vec3 PreviousReflectionO = firstP;
+    vec3 PreviousReflectionD = reflect(rd, firstN);
+    
+    int stackIndex;
+    for(stackIndex = 1; stackIndex < MAX_DETECTIONS && lightIntensity >  0.0; ++stackIndex){
+        material tempMat;
+        vec3 nextPointO;
+        vec3 nextPointNorm;
+        vec3 nextPointD;
+
+        if( !intersect(PreviousReflectionO, PreviousReflectionD, MAX_DIST, nextPointO, nextPointNorm, tempMat, false) ){
+            break;
+        }
+
+        nextPointD = reflect(PreviousReflectionD, nextPointNorm);
+
+        bool isInShadow;
+        colorStack[stackIndex] = tempMat.color.rgb * GetLight(nextPointO, nextPointNorm, lamp_pos, isInShadow);
+        if(!isInShadow){
+            colorStack[stackIndex] = shade(nextPointO, PreviousReflectionD, normalize(lamp_pos - nextPointO), 
+                colorStack[stackIndex], tempMat);
+        }
+        colorWeight[stackIndex] = lightIntensity* (1 - mat.reflectedPortion);
+        lightIntensity = lightIntensity * mat.reflectedPortion;
+    }
+
+    // Add some lighting code here!
+	vec4 color = vec4(0., 0., 0., 1.0);//mat.color.rgb * GetLight(p, n, lamp_pos, isInShadow)
+    
+    for(int i = 0; i < stackIndex; ++i)
+    {
+        color.rgb += colorWeight[i] * colorStack[i];
+    }
+
+    return color.xyz;
 }
 
 uniform vec3 cameraFront;
