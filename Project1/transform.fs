@@ -1,4 +1,6 @@
-#version 330
+#version 330 core
+
+
 // Tampere University
 // COMP.CE.430 Computer Graphics Coding Assignment 2020
 //
@@ -12,10 +14,10 @@
 //-------------------------------------------------------------------------------
 // example functionality          | X  | Example note: control this with var YYYY
 // Mandatory functionalities ----------------------------------------------------
-//   Perspective projection       |    | 
-//   Phong shading                |    | 
-//   Camera movement and rotation |    | 
-//   Sharp shadows                |    | 
+//   Perspective projection       | X  | 
+//   Phong shading                | X  | 
+//   Camera movement and rotation | -  | 
+//   Sharp shadows                | X  | 
 // Extra functionalities --------------------------------------------------------
 //   Tone mapping                 |    | 
 //   PBR shading                  |    | 
@@ -25,7 +27,7 @@
 //   Refractions                  |    | 
 //   Caustics                     |    | 
 //   SDF Ambient Occlusions       |    | 
-//   Texturing                    |    | 
+//   Texturing                    |  - | 
 //   Simple game                  |    | 
 //   Progressive path tracing     |    | 
 //   Basic post-processing        |    | 
@@ -80,15 +82,6 @@ uniform vec2 u_mouse;
 // Time since startup, in seconds
 uniform float u_time;
 
-// texture samplers
-uniform sampler2D brickWallTexture;
-uniform sampler2D brickWallTextureNormal;
-
-uniform vec3 left_wall_tangent;
-uniform vec3 left_wall_bitangent;
-
-uniform vec3 right_wall_tangent;
-uniform vec3 right_wall_bitangent;
 
 // materials
 
@@ -103,9 +96,6 @@ struct material
 	float diffuse_intensity;
 	float specular_intensity;
 	float shininess;
-    // normal mapping
-    bool supportsNormalMapping;
-    vec3 surfaceNormalAtPoint;
 };
 
 
@@ -188,21 +178,6 @@ vec3 rot_z(vec3 p, float a)
     );
 }
 
-/* UV sampling
-*/
-vec2 getUV(vec3 p, vec3 n){ 
-    vec3 m = abs(n);      
-
-    if(m.x >= m.y && m.x >= m.z){ 
-        return p.yz*0.25; 
-    } 
-    else if(m.y > m.x && m.y >= m.z){ 
-        return p.xz*0.25; 
-    } 
-    else{ 
-        return p.xy*0.25; 
-    } 
-} 
 
 /* Each object has a distance function and a material function. The distance
  * function evaluates the distance field of the object at a given point, and
@@ -221,12 +196,11 @@ material blob_material(vec3 p)
     mat.color = vec4(1.0, 0.5, 0.3, 0.0);
     
     mat.use_phong_shading = true;
-    mat.supportsNormalMapping = false;
-    mat.shininess = 2;
+    mat.shininess = 0.2;
     mat.specular_intensity = 0.288;
     mat.diffuse_intensity = 0.5;
-    mat.diffuse = vec3(0.740,0.733,0.309);
-    mat.specular = vec3(0.750,0.643,0.750);
+    mat.diffuse = vec3(1.0, 0.5, 0.3);
+    mat.specular = vec3(1.0, 1.0, 1.0);
 
     return mat;
 }
@@ -239,15 +213,14 @@ float sphere_distance(vec3 p)
 material sphere_material(vec3 p)
 {
     material mat;
-    mat.color = vec4(0.1, 0.2, 0.0, 1.0);
+    mat.color = vec4(0.1, 0.5, 0.0, 1.0);
 
-    mat.supportsNormalMapping = false;
 	mat.use_phong_shading = true;
-    mat.shininess = 2;
-    mat.specular_intensity = 0.288;
+    mat.shininess = 0.2;
+    mat.specular_intensity = 0.7;
     mat.diffuse_intensity = 0.5;
-    mat.diffuse = vec3(0.740,0.733,0.309);
-    mat.specular = vec3(0.750,0.643,0.750);
+    mat.diffuse = vec3(0.1, 0.2, 0.0);
+    mat.specular = vec3(1.0, 1.0, 1.0);
 
     return mat;
 }
@@ -265,39 +238,17 @@ material room_material(vec3 p)
     material mat;
     mat.color = vec4(1.0, 1.0, 1.0, 1.0);
     
-    mat.supportsNormalMapping = false;
     mat.use_phong_shading = true;
-    mat.shininess = 2;
+    mat.shininess = 0.2;
     mat.specular_intensity = 0.288;
     mat.diffuse_intensity = 0.5;
-    mat.diffuse = vec3(0.740,0.733,0.309);
-    mat.specular = vec3(0.750,0.643,0.750);
+    mat.specular = vec3(0.8,0.8,0.8);
 
-    vec3 eps = vec3(0.001, 0.0, 0.0);
-    vec3 pNorm = normalize(vec3(
-        room_distance(p+eps.xyy)-room_distance(p-eps.xyy),
-        room_distance(p+eps.yxy)-room_distance(p-eps.yxy),
-        room_distance(p+eps.yyx)-room_distance(p-eps.yyx)
-    ));
+    if(p.x <= -2.98) mat.color.rgb = vec3(1.0, 0.0, 0.0);
+    else if(p.x >= 2.98) mat.color.rgb = vec3(0.0, 1.0, 0.0);
 
-    vec2 samplingLoc= getUV(p, pNorm);
+    mat.diffuse = mat.color.xyz;
 
-    //vec2 pixelLocation = gl_FragCoord.xy / 512.f - floor(gl_FragCoord.xy / 512.f);
-    vec4 pixelTextureVal = texture(brickWallTexture, samplingLoc.yx);
-    vec3 pixelTextureNormVal = texture(brickWallTextureNormal, samplingLoc.yx).xyz;
-    
-    if(p.x <= -2.98){
-        mat.supportsNormalMapping = true;
-        mat.surfaceNormalAtPoint = pixelTextureNormVal;
-    	mat.color.rgb = pixelTextureVal.xyz; 
-    	//vec3(1.0, 0.0, 0.0);	
-    } 
-    else if(p.x >= 2.98){
-        mat.supportsNormalMapping = false;
-        //mat.surfaceNormalAtPoint = pixelTextureNormVal;
-    	//mat.color.rgb = vec3(0.0, 1.0, 0.0);
-    	mat.color.rgb = pixelTextureVal.xyz;
-    }
     return mat;
 }
 
@@ -310,7 +261,7 @@ material crate_material(vec3 p)
 {
     material mat;
     mat.color = vec4(1.0, 1.0, 1.0, 1.0);
-    mat.supportsNormalMapping = false;
+
     mat.use_phong_shading = true;
     mat.shininess = 0.2;
     mat.specular_intensity = 0.288;
@@ -470,15 +421,14 @@ vec3 shade(vec3 n, vec3 rd, vec3 ld, vec3 color, material mat){
     calculate the phong reflection model diffuse and specular term here!
     Hint: Check the lecture slides from the previous lecture
     */
+    vec3 diffuse = mat.diffuse * mat.diffuse_intensity;
+    diffuse = diffuse * max(dot(ld, n), 0.0);
+    
     vec3 reflectedLightDirection = reflect(ld, n);
-    
-    vec3 defuse = mat.diffuse  * mat.diffuse_intensity * dot(normalize(ld), normalize(n));
-	
-	vec3 spec = mat.specular * mat.specular_intensity * pow(
-		dot(normalize(reflectedLightDirection), normalize(rd)), mat.shininess 
-   	);
-    
-    return color + defuse + spec;
+    vec3 spec = mat.specular * mat.specular_intensity *
+        pow(max(dot(reflectedLightDirection, rd), 0.0), mat.shininess);
+   	
+    return 0.5 * color + diffuse + spec;
 }
 
 /* Calculates the color of the pixel, based on view ray origin and direction.
@@ -504,7 +454,7 @@ vec3 render(vec3 ro, vec3 rd)
     // Add some lighting code here!
     bool isInShadow;
 	vec3 color = mat.color.rgb * GetLight(p, n, lamp_pos, isInShadow);
-
+    
 	if(!isInShadow)
 	{
 		color = shade(n, rd, normalize(lamp_pos-p), color, mat);
@@ -513,6 +463,10 @@ vec3 render(vec3 ro, vec3 rd)
     return color;
 }
 
+uniform vec3 cameraFront;
+uniform vec3 cameraPos;
+uniform vec3 cameraRotation;
+out vec4 FragColor;
 
 void main()
 {
@@ -526,20 +480,20 @@ void main()
 
     // Modify these two to create perspective projection!
     // Origin of the view ray
-    vec3 ro = vec3(vec2(uv.x * aspect, uv.y), -3.0);
+    //vec3 cameraPos = vec3(vec2(0, 0), -3.0);
 	// Direction of the view ray
     vec3 rd = vec3(uv.x,uv.y,1);
+    rd = rot_x(rd, cameraRotation.x);
+    rd = rot_y(rd, cameraRotation.y);
+    // if(moveCamera)
+    // {
+    // 	cameraPos.z += sin(u_time / 2.) * 2;
+    // }
 
-    if(moveCamera)
-    {
-    	ro.z += sin(u_time / 2.) * 2;
-    	ro.x += cos(u_time / 2.) * 2;
-    }
-
-    if(rotateCamera)
-    {
-    	// do something
-    }
+    // if(rotateCamera)
+    // {
+    //     rd = rot_y(rd, u_time / 10.);
+    // }
     
-    gl_FragColor = vec4(render(ro, rd), 1.0);
+    FragColor = vec4(render(cameraPos, rd), 1.0);
 }

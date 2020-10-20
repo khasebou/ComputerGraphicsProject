@@ -19,9 +19,27 @@
 #include "Shader.h"
 #include "stb_image.h"
 
-std::pair<glm::vec3, glm::vec3> makeTBNTransformForWalls(glm::vec3* wallVertices);
+std::pair<glm::vec3, glm::vec3> makeTBNTransformForWalls(glm::vec3 wallVertices[]);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void processInput(GLFWwindow* window);
+
+
+bool firstMouse = true;
+float yaw = 0;	// yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
+float pitch = 0.0f;
+float lastX = 800.0f / 2.0;
+float lastY = 600.0 / 2.0;
+
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, -3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+glm::vec3 cameraRotation = glm::vec3(0.0f, 0.0f, 0.0f);
+
+
+// timing
+float deltaTime = 0.0f;	// time between current frame and last frame
+float lastFrame = 0.0f;
 
 // settings
 const unsigned int SCR_WIDTH = 800;
@@ -38,7 +56,7 @@ int main()
 
     // glfw window creation
     // --------------------
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Graphics Project", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -46,6 +64,7 @@ int main()
         return -1;
     }
     glfwMakeContextCurrent(window);
+    glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     // glad: load all OpenGL function pointers
@@ -125,6 +144,9 @@ int main()
     // -----------
     while (!glfwWindowShouldClose(window))
     {
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
         // input
         // -----
         processInput(window);
@@ -153,9 +175,13 @@ int main()
         glBindTexture(GL_TEXTURE_2D, brickWallTextureNormalID);
 
         // pass transformation matrices to the shader
+        ourShader.setVec3("cameraPos", cameraPos);
+        ourShader.setVec3("cameraFront", cameraFront);
+        ourShader.setVec3("cameraRotation", cameraRotation);
         ourShader.setVec2("u_resolution", u_resolution);
         ourShader.setVec2("u_mouse", u_mouse);
         ourShader.setFloat("u_time", u_time);
+        
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -171,14 +197,6 @@ int main()
 }
 
 
-// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-// ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow* window)
-{
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-}
-
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
 // ---------------------------------------------------------------------------------------------
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
@@ -186,6 +204,61 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
+}
+
+
+// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
+// ---------------------------------------------------------------------------------------------------------
+void processInput(GLFWwindow* window)
+{
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+
+    float cameraSpeed = 2.5 * deltaTime;
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        cameraPos -= cameraSpeed * cameraFront;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        cameraPos += cameraSpeed * cameraFront;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    if (firstMouse)
+    {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos;
+    lastX = xpos;
+    lastY = ypos;
+
+    float sensitivity = 0.3f;
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yaw += xoffset;
+    pitch += yoffset;
+
+    if (pitch > 89.0f)
+        pitch = 89.0f;
+    if (pitch < -89.0f)
+        pitch = -89.0f;
+
+    
+    //glm::vec3 direction;
+    cameraRotation.y = -glm::radians(yaw);
+    cameraRotation.x = -glm::radians(pitch);
+    //direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    //direction.y = sin(glm::radians(pitch));
+    //direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    //cameraFront = glm::normalize(direction);
 }
 
 
