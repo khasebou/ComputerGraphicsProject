@@ -510,13 +510,6 @@ vec3 render(vec3 ro, vec3 rd)
 		color = shade(n, rd, normalize(lamp_pos-p), color, mat);
 	}
 
-    if(mat.supportsNormalMapping && p.x < 0.f)
-    {
-        //mat3 tbn = mat3(left_wall_tangent, left_wall_bitangent, normalize(n));
-        //n = tbn * (mat.surfaceNormalAtPoint * 2.0 - 1.0);
-        color = left_wall_tangent;//normalize(n);
-    }
-
     return color;
 }
 
