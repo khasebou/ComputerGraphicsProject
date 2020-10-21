@@ -23,7 +23,7 @@
 //   PBR shading                  |    | 
 //   Soft shadows                 |    | 
 //   Sharp reflections            |    | 
-//   Glossy reflections           |    | 
+//   Glossy reflections           |  X | 
 //   Refractions                  |    | 
 //   Caustics                     |    | 
 //   SDF Ambient Occlusions       |    | 
@@ -38,7 +38,8 @@
 //   Advanced own SDF             |    | 
 //   Animated SDF                 |    | 
 //   Other?                       |    | 
-//   BLOOM                        |  X |
+//   BLOOM                        | X  |
+//   shader                       | X  |
 // constants
 
 #define PI 3.14159265359
