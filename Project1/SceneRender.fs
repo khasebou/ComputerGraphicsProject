@@ -39,9 +39,9 @@
 //   Animated SDF                 |    | 
 //   Other?                       |    | 
 //   BLOOM                        | X  |
-//   shader                       | X  |
+//   OWN shader                   | X  |
 //   Extra basic shape TORUS      | X  |
-//   
+//   Animated Shape using smooth union | X  |
 // constants
 
 #define PI 3.14159265359
@@ -189,6 +189,20 @@ vec3 rot_z(vec3 p, float a)
  * the material function determines the surface material at a point.
  */
 
+float opSmoothUnion( float d1, float d2, float k )
+{
+    float h = max(k-abs(d1-d2),0.0);
+    return min(d1, d2) - h*h*0.25/k;
+	//float h = clamp( 0.5 + 0.5*(d2-d1)/k, 0.0, 1.0 );
+	//return mix( d2, d1, h ) - k*h*(1.0-h);
+}
+
+float box_distance( vec3 p, vec3 loc, vec3 b )
+{
+    p = p - loc;
+    vec3 q = abs(p) - b;
+    return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+}
 
 float torus_distance( vec3 p )
 {
@@ -238,9 +252,9 @@ material blob_material(vec3 p)
     return mat;
 }
 
-float sphere_distance(vec3 p)
+float sphere_distance(vec3 p, vec3 pos, float radius)
 {
-    return length(p - vec3(1.5, -1.8, 4.0)) - 1.2;
+    return length(p - pos) - radius;
 }
 
 material sphere_material(vec3 p)
@@ -257,6 +271,22 @@ material sphere_material(vec3 p)
     mat.reflectedPortion = 0.0f;
 
     return mat;
+}
+
+
+float animated_box(vec3 p, vec3 loc, float stepSize)
+{
+    float d = 1e10;
+    float an = sin(u_time);
+
+    vec3 sphereLoc = loc;
+    sphereLoc.z = sphereLoc.z + stepSize * an;
+
+    float d1 = sphere_distance(p, sphereLoc, 0.5);
+    float d2 = box_distance(p, loc, vec3(1.0, 1.0, 0.5) ); 
+    float dt = opSmoothUnion(d1,d2, 0.25);
+    d = min( d, dt );
+    return d;
 }
 
 
@@ -395,7 +425,8 @@ float map(
         min_dist = dist;
     }
 
-    dist = sphere_distance(p);
+    vec3 sphereLoc = vec3(1.5, -1.8, 4.0);
+    dist = sphere_distance(p, sphereLoc, 1.2);
     if(dist < min_dist) {
         mat = sphere_material(p);
         min_dist = dist;
@@ -405,6 +436,14 @@ float map(
     dist = torus_distance(p);
     if(dist < min_dist){
         mat = torus_material(p);
+        min_dist = dist;
+    }
+
+    vec3 animBoxLoc = vec3(-3., -2., 3.);
+    dist = animated_box(p, animBoxLoc, 1.);
+    if(dist < min_dist){
+        mat = torus_material(p);
+        mat.color = vec4(0.8, 0.8, 0.8, 1.);
         min_dist = dist;
     }
 
