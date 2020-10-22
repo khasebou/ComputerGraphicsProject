@@ -40,6 +40,8 @@
 //   Other?                       |    | 
 //   BLOOM                        | X  |
 //   shader                       | X  |
+//   Extra basic shape TORUS      | X  |
+//   
 // constants
 
 #define PI 3.14159265359
@@ -187,6 +189,33 @@ vec3 rot_z(vec3 p, float a)
  * the material function determines the surface material at a point.
  */
 
+
+float torus_distance( vec3 p )
+{
+    vec2 t = vec2(0.8,0.2);
+    vec3 pos = vec3(4, -1.8, 3.0);
+    p = p - pos;
+
+    vec2 q = vec2(length(p.xy)-t.x, p.z);
+    return length(q)-t.y;
+}
+
+material torus_material(vec3 p)
+{
+    material mat;
+    mat.color = vec4(8.0, 0.3, 0.3, 0.0);
+    
+    mat.use_phong_shading = true;
+    mat.shininess = 0.2;
+    mat.specular_intensity = 0.288;
+    mat.diffuse_intensity = 0.5;
+    mat.diffuse = vec3(1.0, 0.5, 0.3);
+    mat.specular = vec3(1.0, 1.0, 1.0);
+    mat.reflectedPortion = 0.0f;
+
+    return mat;
+}
+
 float blob_distance(vec3 p)
 {
     vec3 q = p - vec3(-0.5, -2.2 + abs(sin(u_time*3.0)), 2.0);
@@ -230,17 +259,53 @@ material sphere_material(vec3 p)
     return mat;
 }
 
+
+float plane_distance(vec3 p)
+{
+    return  3.0 + p.y ;
+}
+
+material sky_material(vec3 p)
+{
+    material mat;
+
+    mat.use_phong_shading = false;
+    mat.shininess = 0.2;
+    mat.specular_intensity = 0.288;
+    mat.diffuse_intensity = 0.5;
+    mat.specular = vec3(0.8,0.8,0.8);
+    mat.reflectedPortion = 0.2f;
+    mat.diffuse = mat.color.xyz;
+    mat.color = vec4(0.1, 0.1, 0.9, 1. );
+
+    return mat;
+}
+
+material plane_material(vec3 p)
+{
+    material mat;
+    
+    //mat.color = vec4(1.0, 1.0, 1.0, 1.0);
+    mat.use_phong_shading = true;
+    mat.shininess = 0.2;
+    mat.specular_intensity = 0.288;
+    mat.diffuse_intensity = 0.5;
+    mat.specular = vec3(0.8,0.8,0.8);
+    mat.reflectedPortion = 0.2f;
+    mat.diffuse = mat.color.xyz;
+
+    vec2 s = sign(fract(p.xy*.5)-.5);
+    mat.color = vec4(0.8, 0.8, 0.8, 1. );
+    
+    return mat;    
+}
+
 float room_distance(vec3 p)
 {
     return max(
         -box(p-vec3(0.0,3.1,3.0), vec3(0.5, 0.5, 0.5)),
         -box(p-vec3(0.0,0.0,0.0), vec3(3.0, 3.0, 6.0))
     );
-    
-   // max(
-    //    -box(p-vec3(0.0,2.8,3.0), vec3(0.5, 3.0, 0.5)),
-   //     -box(p-vec3(0.0,0.0,0.0), vec3(3.0, 3.0, 6.0))
-   // );
 }
 
 material room_material(vec3 p)
@@ -312,9 +377,15 @@ float map(
         min_dist = dist;
     }
 
-    dist = room_distance(p);
-    if(dist < min_dist) {
-        mat = room_material(p);
+    //dist = room_distance(p);
+    // if(dist < min_dist) {
+    //     mat = room_material(p);
+    //     min_dist = dist;
+    // }
+    dist = plane_distance(p);
+    if(dist < min_dist)
+    {
+        mat = plane_material(p);
         min_dist = dist;
     }
 
@@ -331,6 +402,11 @@ float map(
     }
 
     // Add your own objects here!
+    dist = torus_distance(p);
+    if(dist < min_dist){
+        mat = torus_material(p);
+        min_dist = dist;
+    }
 
     return min_dist;
 }
@@ -460,7 +536,11 @@ vec3 render(vec3 ro, vec3 rd)
     material mat;
 
     // Compute intersection point along the view ray.
-    intersect(ro, rd, MAX_DIST, firstP, firstN, mat, false);
+    bool hit = intersect(ro, rd, MAX_DIST, firstP, firstN, mat, false);
+    if(!hit)
+    {
+        return vec3(0.7, 0.7, 0.7);
+    }
 
     float lightIntensity = 1;
     const int MAX_DETECTIONS = 2;
@@ -540,3 +620,56 @@ void main()
         BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
     }
 }
+
+
+/*
+    USED CODE THAT CAN BE USED LATER
+*/
+
+// float mandelbrot( in vec2 c )
+// {
+//     const float B = 256.;
+//     float l = 0.0;
+//     vec2 z  = vec2(0.0);
+//     for( int i=0; i<512; i++ )
+//     {
+//         z = vec2( z.x*z.x - z.y*z.y, 2.0*z.x*z.y ) + c;
+//         if( dot(z,z)>(B*B) ) break;
+//         l += 1.0;
+//     }
+
+//     if( l>511.0) 
+//         return 0.0;
+    
+//     return l;
+// }
+
+// vec3 mandelbrotHelper(vec2 pixelLoc, vec2 drawingAreaDims){
+//     vec3 col = vec3(0.0);
+    
+//     const int AA = 1;
+    
+//     for( int m=0; m<AA; m++ )
+//     {
+//         for( int n=0; n<AA; n++ )
+//         {
+//             vec2 p = (-drawingAreaDims.xy + 2.0*(pixelLoc.xy+vec2(float(m),float(n))/float(AA)))/drawingAreaDims.y;
+//             float w = float(AA*m+n);
+
+//             float orientation = 4.71239;
+//             float coa = cos( orientation );
+//             float sia = sin( orientation );
+
+//             vec2 xy = vec2( p.x*coa-p.y*sia, p.x*sia+p.y*coa);
+//             vec2 c = vec2(0,0) + xy;
+
+//             float l = mandelbrot(c);
+
+//             col += 0.5 + 0.5*cos( 3.0 + l*0.15 + vec3(1.0,1.0,1.0));
+//         }
+//     }
+    
+//     col /= float(AA*AA);
+
+//     return col;
+// }
