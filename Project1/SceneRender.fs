@@ -41,7 +41,8 @@
 //   BLOOM                        | X  |
 //   OWN shader                   | X  |
 //   Extra basic shape TORUS      | X  |
-//   Animated Shape using smooth union | X  |
+//   Animated Shape (smooth union)| X  |
+//   Complex shape (mandelbrot)   | X  |
 // constants
 
 #define PI 3.14159265359
@@ -311,22 +312,75 @@ material sky_material(vec3 p)
     return mat;
 }
 
+//----------------------------------------------------------------
+// generalized mandelbrot set, with smooth iteration count
+
+vec2 cpow( vec2 z, float n ) { 
+    float r = length( z ); 
+    float a = atan( z.y, z.x ); 
+    return pow( r, n )*vec2( cos(a*n), sin(a*n) ); 
+}
+
+vec3 drawFractal(float k, vec2 point , vec2 canvasArea)
+{
+    vec3 col = vec3(0.0);
+   
+    vec2 p = (-canvasArea.xy + 2.*(point))/canvasArea.y;    
+    vec2 c = p * 1.25;
+     
+    const float threshold = 3.0;
+    vec2 z = vec2( 0.0 );
+    float it = 0.0;
+    for( int i=0; i<100; i++ )
+    {
+        z = cpow(z, k) + c;
+        if( dot(z,z)>threshold ) 
+            break;
+        it++;
+    }
+
+    if( it<99.5 )
+    {
+        float sit = it - log2(log2(dot(z,z))/(log2(threshold)))/log2(k); 
+        col = 0.5 + 0.5*cos( 3.0 + sit*0.075*k + vec3(0.1,0.1,0.1));
+    }
+
+    return col;
+}
+
 material plane_material(vec3 p)
 {
-    material mat;
-    
-    //mat.color = vec4(1.0, 1.0, 1.0, 1.0);
-    mat.use_phong_shading = true;
-    mat.shininess = 0.2;
-    mat.specular_intensity = 0.288;
-    mat.diffuse_intensity = 0.5;
-    mat.specular = vec3(0.8,0.8,0.8);
-    mat.reflectedPortion = 0.2f;
-    mat.diffuse = mat.color.xyz;
+    material mat;    
 
-    vec2 s = sign(fract(p.xy*.5)-.5);
-    mat.color = vec4(0.8, 0.8, 0.8, 1. );
-    
+    vec3 fract_start = vec3(-5, 0, 2);
+    vec3 fract_end = vec3(5, 0, -3);
+
+    if( fract_end.x >= p.x && fract_start.x <= p.x && 
+        fract_end.z <= p.z && fract_start.z >= p.z)
+    {
+        mat.use_phong_shading = false;
+        mat.shininess = 0.0;
+        mat.specular_intensity = 0.288;
+        mat.diffuse_intensity = 0.5;
+        mat.specular = vec3(0.8,0.8,0.8);
+        mat.reflectedPortion = 0.0f;
+        mat.diffuse = mat.color.xyz;
+        mat.color = vec4(0.8, 0.8, 0.8, 1. );
+
+        vec2 relativePoint = (p - fract_start).xz;
+        vec2 area = fract_end.xz - fract_start.xz;
+        mat.color = vec4(drawFractal(2., relativePoint, area), 1.);
+    }else{
+        mat.use_phong_shading = true;
+        mat.shininess = 0.2;
+        mat.specular_intensity = 0.288;
+        mat.diffuse_intensity = 0.5;
+        mat.specular = vec3(0.8,0.8,0.8);
+        mat.reflectedPortion = 0.2f;
+        mat.diffuse = mat.color.xyz;
+        mat.color = vec4(0.8, 0.8, 0.8, 1. );
+    }
+
     return mat;    
 }
 
@@ -543,10 +597,11 @@ float GetLight(vec3 p, vec3 pNorm, vec3 lightPos, out bool inShadow) {
 }
 
 vec3 shade(vec3 n, vec3 rd, vec3 ld, vec3 color, material mat){
-    /*
-    calculate the phong reflection model diffuse and specular term here!
-    Hint: Check the lecture slides from the previous lecture
-    */
+    if(!mat.use_phong_shading)
+    {
+        return color;
+    }
+
     vec3 diffuse = mat.diffuse * mat.diffuse_intensity;
     diffuse = diffuse * max(dot(ld, n), 0.0);
     
@@ -660,55 +715,3 @@ void main()
     }
 }
 
-
-/*
-    USED CODE THAT CAN BE USED LATER
-*/
-
-// float mandelbrot( in vec2 c )
-// {
-//     const float B = 256.;
-//     float l = 0.0;
-//     vec2 z  = vec2(0.0);
-//     for( int i=0; i<512; i++ )
-//     {
-//         z = vec2( z.x*z.x - z.y*z.y, 2.0*z.x*z.y ) + c;
-//         if( dot(z,z)>(B*B) ) break;
-//         l += 1.0;
-//     }
-
-//     if( l>511.0) 
-//         return 0.0;
-    
-//     return l;
-// }
-
-// vec3 mandelbrotHelper(vec2 pixelLoc, vec2 drawingAreaDims){
-//     vec3 col = vec3(0.0);
-    
-//     const int AA = 1;
-    
-//     for( int m=0; m<AA; m++ )
-//     {
-//         for( int n=0; n<AA; n++ )
-//         {
-//             vec2 p = (-drawingAreaDims.xy + 2.0*(pixelLoc.xy+vec2(float(m),float(n))/float(AA)))/drawingAreaDims.y;
-//             float w = float(AA*m+n);
-
-//             float orientation = 4.71239;
-//             float coa = cos( orientation );
-//             float sia = sin( orientation );
-
-//             vec2 xy = vec2( p.x*coa-p.y*sia, p.x*sia+p.y*coa);
-//             vec2 c = vec2(0,0) + xy;
-
-//             float l = mandelbrot(c);
-
-//             col += 0.5 + 0.5*cos( 3.0 + l*0.15 + vec3(1.0,1.0,1.0));
-//         }
-//     }
-    
-//     col /= float(AA*AA);
-
-//     return col;
-// }
