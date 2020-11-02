@@ -21,7 +21,7 @@
 // Extra functionalities --------------------------------------------------------
 //   Tone mapping                 |    | 
 //   PBR shading                  |    | 
-//   Soft shadows                 |    | 
+//   Soft shadows                 |  X | 
 //   Sharp reflections            |    | 
 //   Glossy reflections           |  X | 
 //   Refractions                  |    | 
