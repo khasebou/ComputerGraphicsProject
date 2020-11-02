@@ -23,9 +23,10 @@ std::pair<glm::vec3, glm::vec3> makeTBNTransformForWalls(glm::vec3 wallVertices[
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void processInput(GLFWwindow* window);
+void RenderingOptionsButtonHandler(GLFWwindow* window, int key, int scancode, int action, int mods);
 
-
-bool firstMouse = true;
+bool use_soft_shadows = false;
+bool firstTimeMouseFocusOnWindow = true;
 float yaw = 0;	
 float pitch = 0.0f;
 float lastX = 800.0f / 2.0;
@@ -76,7 +77,7 @@ int main()
         return -1;
     }
 
-
+    glfwSetKeyCallback(window, RenderingOptionsButtonHandler);
     // build and compile our shader
     // ------------------------------------
     Shader SceneRenderingShader("SceneRender.vs", "SceneRender.fs");
@@ -221,7 +222,8 @@ int main()
         SceneRenderingShader.setVec2("u_resolution", u_resolution);
         SceneRenderingShader.setVec2("u_mouse", u_mouse);
         SceneRenderingShader.setFloat("u_time", u_time);
-        
+        SceneRenderingShader.setBool ("use_soft_shadows", use_soft_shadows);
+
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         // blur bright spots
@@ -296,15 +298,24 @@ void processInput(GLFWwindow* window)
         cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    
+}
+
+void RenderingOptionsButtonHandler(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    if (key == GLFW_KEY_E && action == GLFW_PRESS)
+    {
+        use_soft_shadows = !use_soft_shadows;
+    }
 }
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
-    if (firstMouse)
+    if (firstTimeMouseFocusOnWindow)
     {
         lastX = xpos;
         lastY = ypos;
-        firstMouse = false;
+        firstTimeMouseFocusOnWindow = false;
     }
 
     float xoffset = xpos - lastX;

@@ -85,10 +85,12 @@ uniform vec2 u_resolution;
 uniform vec2 u_mouse;
 // Time since startup, in seconds
 uniform float u_time;
+// turns on soft_shadows instead of sharp shadows
+uniform bool use_soft_shadows;
+
 
 
 // materials
-
 struct material
 {
 	// The color of the surface
@@ -388,7 +390,7 @@ float room_distance(vec3 p)
 {
     return max(
         -box(p-vec3(0.0,3.1,3.0), vec3(0.5, 0.5, 0.5)),
-        -box(p-vec3(0.0,0.0,0.0), vec3(3.0, 3.0, 6.0))
+        -box(p-vec3(0.0,0.0,0.0), vec3(6.0, 3.0, 6.0))
     );
 }
 
@@ -404,8 +406,8 @@ material room_material(vec3 p)
     mat.specular = vec3(0.8,0.8,0.8);
     mat.reflectedPortion = 0.2f;
 
-    if(p.x <= -2.98) mat.color.rgb = vec3(1.0, 0.0, 0.0);
-    else if(p.x >= 2.98) mat.color.rgb = vec3(0.0, 1.0, 0.0);
+    if(p.x <= -5.98) mat.color.rgb = vec3(1.0, 0.0, 0.0);
+    else if(p.x >= 5.98) mat.color.rgb = vec3(0.0, 1.0, 0.0);
 
     mat.diffuse = mat.color.xyz;
 
@@ -461,17 +463,19 @@ float map(
         min_dist = dist;
     }
 
-    //dist = room_distance(p);
-    // if(dist < min_dist) {
-    //     mat = room_material(p);
-    //     min_dist = dist;
-    // }
+    dist = room_distance(p);
+    if(dist < min_dist) {
+         mat = room_material(p);
+         min_dist = dist;
+    }
+    /*
     dist = plane_distance(p);
     if(dist < min_dist)
     {
         mat = plane_material(p);
         min_dist = dist;
     }
+    */
 
     dist = crate_distance(p);
     if(dist < min_dist) {
@@ -504,6 +508,29 @@ float map(
     return min_dist;
 }
 
+float calculateSoftshadow(vec3 ro, vec3 rd, float mint, float tmax)
+{
+	float res = 1.0;
+    float t = mint;
+    float ph = 1e10; // big, such that y = 0 on the first iteration
+    
+    for( int i=0; i<32; i++ )
+    {
+        material matOut;
+		float h = map( ro + rd*t , matOut);
+
+        float y = h*h/(2.0*ph);
+        float d = sqrt(h*h-y*y);
+        res = min( res, 10.0*d/max(0.0,t-y) );
+        ph = h;
+        
+        t += h;
+        
+        if( res<0.0001 || t>tmax ) break;
+        
+    }
+    return clamp( res, 0.2, 1.0 );
+}
 
 /* Calculates the normal of the surface closest to point p.
  *
@@ -584,13 +611,12 @@ float GetLight(vec3 p, vec3 pNorm, vec3 lightPos, out bool inShadow) {
     float distanceToLight= length(lightPos- p);
     
     // Compute intersection point along the view ray.
-    bool hit = intersect(p + pNorm * 0.001, l, distanceToLight * 0.9, p1, n1, mat, false);
+    inShadow = intersect(p + pNorm * 0.001, l, distanceToLight * 0.9, p1, n1, mat, false);
     
-    if( hit ){
-      	dif *= 0.3;
-        inShadow = true;
-    }else{
-        inShadow = false;
+    if(use_soft_shadows){
+      	dif *= calculateSoftshadow(p, l, 0.01, 3.0);
+    }else if(inShadow){
+        dif *= 0.3;
     }
     
     return dif;
