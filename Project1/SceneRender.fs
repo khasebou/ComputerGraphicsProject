@@ -27,7 +27,7 @@
 //   Refractions                  |    | 
 //   Caustics                     |    | 
 //   SDF Ambient Occlusions       |    | 
-//   Texturing                    |  - | 
+//   Texturing                    |  x | 
 //   Simple game                  |    | 
 //   Progressive path tracing     |    | 
 //   Basic post-processing        |    | 
@@ -87,7 +87,8 @@ uniform vec2 u_mouse;
 uniform float u_time;
 // turns on soft_shadows instead of sharp shadows
 uniform bool use_soft_shadows;
-
+// texture for the floor
+uniform sampler2D marbleFloorTexture;
 
 
 // materials
@@ -186,6 +187,22 @@ vec3 rot_z(vec3 p, float a)
     );
 }
 
+
+/* UV sampling
+*/
+vec2 getUV(vec3 p, vec3 n){ 
+    vec3 m = abs(n);      
+
+    if(m.x >= m.y && m.x >= m.z){ 
+        return p.yz*0.25; 
+    } 
+    else if(m.y > m.x && m.y >= m.z){ 
+        return p.xz*0.25; 
+    } 
+    else{ 
+        return p.xy*0.25; 
+    } 
+} 
 
 /* Each object has a distance function and a material function. The distance
  * function evaluates the distance field of the object at a given point, and
@@ -292,12 +309,6 @@ float animated_box(vec3 p, vec3 loc, float stepSize)
     return d;
 }
 
-
-float plane_distance(vec3 p)
-{
-    return  3.0 + p.y ;
-}
-
 material sky_material(vec3 p)
 {
     material mat;
@@ -350,41 +361,6 @@ vec3 drawFractal(float k, vec2 point , vec2 canvasArea)
     return col;
 }
 
-material plane_material(vec3 p)
-{
-    material mat;    
-
-    vec3 fract_start = vec3(-5, 0, 2);
-    vec3 fract_end = vec3(5, 0, -3);
-
-    if( fract_end.x >= p.x && fract_start.x <= p.x && 
-        fract_end.z <= p.z && fract_start.z >= p.z)
-    {
-        mat.use_phong_shading = false;
-        mat.shininess = 0.0;
-        mat.specular_intensity = 0.288;
-        mat.diffuse_intensity = 0.5;
-        mat.specular = vec3(0.8,0.8,0.8);
-        mat.reflectedPortion = 0.0f;
-        mat.diffuse = mat.color.xyz;
-        mat.color = vec4(0.8, 0.8, 0.8, 1. );
-
-        vec2 relativePoint = (p - fract_start).xz;
-        vec2 area = fract_end.xz - fract_start.xz;
-        mat.color = vec4(drawFractal(2., relativePoint, area), 1.);
-    }else{
-        mat.use_phong_shading = true;
-        mat.shininess = 0.2;
-        mat.specular_intensity = 0.288;
-        mat.diffuse_intensity = 0.5;
-        mat.specular = vec3(0.8,0.8,0.8);
-        mat.reflectedPortion = 0.2f;
-        mat.diffuse = mat.color.xyz;
-        mat.color = vec4(0.8, 0.8, 0.8, 1. );
-    }
-
-    return mat;    
-}
 
 float room_distance(vec3 p)
 {
@@ -406,9 +382,28 @@ material room_material(vec3 p)
     mat.specular = vec3(0.8,0.8,0.8);
     mat.reflectedPortion = 0.2f;
 
-    if(p.x <= -5.98) mat.color.rgb = vec3(1.0, 0.0, 0.0);
-    else if(p.x >= 5.98) mat.color.rgb = vec3(0.0, 1.0, 0.0);
-
+    if(p.y < -2.98){
+        vec3 eps = vec3(0.001, 0.0, 0.0);
+        vec3 pNorm = normalize(vec3(
+            room_distance(p+eps.xyy)-room_distance(p-eps.xyy),
+            room_distance(p+eps.yxy)-room_distance(p-eps.yxy),
+            room_distance(p+eps.yyx)-room_distance(p-eps.yyx)
+        ));
+        vec2 samplingLoc= getUV(p, pNorm);
+        mat.color.rgb = texture(marbleFloorTexture, samplingLoc).xyz;
+    }else if(p.x <= -5.98) {
+        mat.color.rgb = vec3(1.0, 0.0, 0.0);
+    }else if(p.x >= 5.98){
+         mat.color.rgb = vec3(0.0, 1.0, 0.0);
+    }else if(p.z >= 5.98){
+        vec3 fract_start = vec3(-5, 3, 0);
+        vec3 fract_end = vec3(5, -3, 0);
+    
+        vec2 relativePoint = (p - fract_start).xy;
+        vec2 area = fract_end.xy - fract_start.xy;
+        mat.color = vec4(drawFractal(2., relativePoint, area), 1.);
+    }
+    
     mat.diffuse = mat.color.xyz;
 
     return mat;
@@ -468,15 +463,7 @@ float map(
          mat = room_material(p);
          min_dist = dist;
     }
-    /*
-    dist = plane_distance(p);
-    if(dist < min_dist)
-    {
-        mat = plane_material(p);
-        min_dist = dist;
-    }
-    */
-
+    
     dist = crate_distance(p);
     if(dist < min_dist) {
         mat = crate_material(p);

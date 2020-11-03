@@ -170,15 +170,12 @@ int main()
     BloomShader.setInt("bloomBlur", 1);
 
     //load image
-    glActiveTexture(GL_TEXTURE0);
     bool success;
-    unsigned int brickWallTextureID = loadTexture("Brick_Wall_Texture.jpg", success);
+    unsigned int marbleFloorTextureID = loadTexture("WM_Marble-125_1024.png", success);
     assert(success);
-    unsigned int brickWallTextureNormalID = loadTexture("Brick_Wall_Texture_NORMAL.jpg", success);
-    assert(success);
-
-    SceneRenderingShader.setInt("brickWallTexture", 0);
-    SceneRenderingShader.setInt("brickWallTextureNormal", 1);
+    
+    SceneRenderingShader.setInt("marbleFloorTexture", marbleFloorTextureID);
+ 
 
     // render loop
     // -----------
@@ -210,12 +207,11 @@ int main()
 
         float u_time = (float) glfwGetTime();
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, brickWallTextureID);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, brickWallTextureNormalID);
-
+        glActiveTexture(GL_TEXTURE0 + 3);
+        glBindTexture(GL_TEXTURE_2D, marbleFloorTextureID);
+        
         // pass transformation matrices to the shader
+        SceneRenderingShader.setInt("marbleFloorTexture", 3);
         SceneRenderingShader.setVec3("cameraPos", cameraPos);
         SceneRenderingShader.setVec3("cameraFront", cameraFront);
         SceneRenderingShader.setVec3("cameraRotation", cameraRotation);
@@ -223,9 +219,9 @@ int main()
         SceneRenderingShader.setVec2("u_mouse", u_mouse);
         SceneRenderingShader.setFloat("u_time", u_time);
         SceneRenderingShader.setBool ("use_soft_shadows", use_soft_shadows);
-
         glDrawArrays(GL_TRIANGLES, 0, 6);
-
+        
+        glActiveTexture(GL_TEXTURE1);
         // blur bright spots
         // switch buffers
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
