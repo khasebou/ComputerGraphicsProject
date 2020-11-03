@@ -66,7 +66,7 @@ int main()
         return -1;
     }
     glfwMakeContextCurrent(window);
-    //glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     // glad: load all OpenGL function pointers
@@ -335,30 +335,3 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
     cameraRotation.x = glm::radians(-pitch);
 }
 
-
-std::pair<glm::vec3, glm::vec3> makeTBNTransformForWalls(glm::vec3 wallVertices[])
-{
-    // texture coordinates
-    const glm::vec2 uv1(0.0, 1.0);
-    const glm::vec2 uv2(0.0, 0.0);
-    const glm::vec2 uv3(1.0, 0.0);
-
-    
-    glm::vec3 edge1 = wallVertices[1] - wallVertices[0];
-    glm::vec3 edge2 = wallVertices[2] - wallVertices[0];
-    glm::vec2 deltaUV1 = uv2 - uv1;
-    glm::vec2 deltaUV2 = uv3 - uv1;
-
-    glm::vec3 tangent1, bitangent1;
-    float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
-
-    tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
-    tangent1.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
-    tangent1.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
-
-    bitangent1.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
-    bitangent1.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
-    bitangent1.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
-
-    return std::make_pair(tangent1, bitangent1);
-}

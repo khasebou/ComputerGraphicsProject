@@ -16,15 +16,15 @@
 // Mandatory functionalities ----------------------------------------------------
 //   Perspective projection       | X  | 
 //   Phong shading                | X  | 
-//   Camera movement and rotation | X  | 
+//   Camera movement and rotation | X  |  'rotation using mouse and movement WSAD keys' though movement direction does not take into consideration camera orientation (IE W will always move in Z direction regardless of camera orientation)
 //   Sharp shadows                | X  | 
 // Extra functionalities --------------------------------------------------------
 //   Tone mapping                 |    | 
 //   PBR shading                  |    | 
-//   Soft shadows                 |  X | 
+//   Soft shadows                 |  X |  Enable by pressing 'E' in the demo
 //   Sharp reflections            |    | 
 //   Glossy reflections           |  X | 
-//   Refractions                  |    | 
+//   Refractions                  |  - | 
 //   Caustics                     |    | 
 //   SDF Ambient Occlusions       |    | 
 //   Texturing                    |  x | 
@@ -70,7 +70,7 @@
  * functions.
  * The current value merely helps with rounding errors.
  */
-#define STEP_RATIO 0.9999
+#define STEP_RATIO 0.99//0.9999
 /* Determines what distance is considered close enough to count as an
  * intersection. Lower values are more correct but require more steps to reach
  * the surface
@@ -105,6 +105,10 @@ struct material
 	float shininess;
     // reflection
     float reflectedPortion;
+    //refraction params
+    float refracIndex;
+    vec3 colorAbsorbtion;
+    bool is_transparent;
 };
 
 
@@ -213,8 +217,6 @@ float opSmoothUnion( float d1, float d2, float k )
 {
     float h = max(k-abs(d1-d2),0.0);
     return min(d1, d2) - h*h*0.25/k;
-	//float h = clamp( 0.5 + 0.5*(d2-d1)/k, 0.0, 1.0 );
-	//return mix( d2, d1, h ) - k*h*(1.0-h);
 }
 
 float box_distance( vec3 p, vec3 loc, vec3 b )
@@ -246,6 +248,7 @@ material torus_material(vec3 p)
     mat.diffuse = vec3(1.0, 0.5, 0.3);
     mat.specular = vec3(1.0, 1.0, 1.0);
     mat.reflectedPortion = 0.0f;
+    mat.is_transparent = false;
 
     return mat;
 }
@@ -259,15 +262,18 @@ float blob_distance(vec3 p)
 material blob_material(vec3 p)
 {
     material mat;
-    mat.color = vec4(1.0, 0.5, 0.3, 0.0);
+    mat.color = vec4(0.0, 0.0, 0.0, 1.0);
     
     mat.use_phong_shading = true;
     mat.shininess = 0.2;
     mat.specular_intensity = 0.288;
     mat.diffuse_intensity = 0.5;
-    mat.diffuse = vec3(1.0, 0.5, 0.3);
-    mat.specular = vec3(1.0, 1.0, 1.0);
+    mat.diffuse = vec3(0.0, 0.0, 0.0);
+    mat.specular = vec3(0.0, 0.0, 0.0);
     mat.reflectedPortion = 0.0f;
+    mat.refracIndex =  1.125;
+    mat.colorAbsorbtion = vec3(8.0, 2.0, 0.1);
+    mat.is_transparent = true;
 
     return mat;
 }
@@ -282,13 +288,15 @@ material sphere_material(vec3 p)
     material mat;
     mat.color = vec4(0.1, 0.5, 0.0, 1.0);
 
-	mat.use_phong_shading = true;
+	mat.use_phong_shading = false;
     mat.shininess = 0.2;
     mat.specular_intensity = 0.7;
     mat.diffuse_intensity = 0.5;
     mat.diffuse = vec3(0.1, 0.2, 0.0);
     mat.specular = vec3(1.0, 1.0, 1.0);
     mat.reflectedPortion = 0.0f;
+    mat.is_transparent = true;
+    mat.refracIndex = 1.125;
 
     return mat;
 }
@@ -308,25 +316,6 @@ float animated_box(vec3 p, vec3 loc, float stepSize)
     d = min( d, dt );
     return d;
 }
-
-material sky_material(vec3 p)
-{
-    material mat;
-
-    mat.use_phong_shading = false;
-    mat.shininess = 0.2;
-    mat.specular_intensity = 0.288;
-    mat.diffuse_intensity = 0.5;
-    mat.specular = vec3(0.8,0.8,0.8);
-    mat.reflectedPortion = 0.2f;
-    mat.diffuse = mat.color.xyz;
-    mat.color = vec4(0.1, 0.1, 0.9, 1. );
-
-    return mat;
-}
-
-//----------------------------------------------------------------
-// generalized mandelbrot set, with smooth iteration count
 
 vec2 cpow( vec2 z, float n ) { 
     float r = length( z ); 
@@ -381,6 +370,7 @@ material room_material(vec3 p)
     mat.diffuse_intensity = 0.5;
     mat.specular = vec3(0.8,0.8,0.8);
     mat.reflectedPortion = 0.2f;
+    mat.is_transparent = false;
 
     if(p.y < -2.98){
         vec3 eps = vec3(0.001, 0.0, 0.0);
@@ -426,6 +416,7 @@ material crate_material(vec3 p)
     mat.diffuse = vec3(0.740,0.733,0.309);
     mat.specular = vec3(0.750,0.643,0.750);
     mat.reflectedPortion = 0.0f;
+    mat.is_transparent = false;
 
     vec3 q = rot_y(p-vec3(-1,-1,5), u_time) * 0.98;
     if(fract(q.x + floor(q.y*2.0) * 0.5 + floor(q.z*2.0) * 0.5) < 0.5)
@@ -590,7 +581,7 @@ bool intersect(
 float GetLight(vec3 p, vec3 pNorm, vec3 lightPos, out bool inShadow) {
     vec3 l = normalize(lightPos-p);
     
-    float dif = clamp(dot(pNorm, l), 0., 1.);
+    float dif = clamp(dot(pNorm, l), 0.0, 1.);
     
 	material mat;
 	vec3 p1, n1;
@@ -625,6 +616,86 @@ vec3 shade(vec3 n, vec3 rd, vec3 ld, vec3 color, material mat){
     return 0.5 * color + diffuse + spec;
 }
 
+
+vec3 GetSurfaceReflectionColor(vec3 rd, vec3 surfacePt, vec3 surfaceNormal, vec3 lamp_pos, 
+    vec3 originalSurfaceColor, material mat)
+{
+    float lightIntensity = 1;
+    const int MAX_RAY_REFLECTIONS_COUNT = 2;
+    vec3 reflColorStack[MAX_RAY_REFLECTIONS_COUNT];
+    float reflColorWeight[MAX_RAY_REFLECTIONS_COUNT];
+    bool isInShadow;
+
+    reflColorStack[0] = originalSurfaceColor * GetLight(surfacePt, surfaceNormal, lamp_pos, isInShadow);
+    reflColorWeight[0] = lightIntensity * (1 - mat.reflectedPortion);
+
+    lightIntensity = lightIntensity * mat.reflectedPortion;
+    vec3 previousNormal = surfaceNormal;
+    vec3 PreviousReflectionO = surfacePt;
+    vec3 PreviousReflectionD = reflect(rd, surfaceNormal);
+
+    int stackIndex;
+    for(stackIndex = 1; stackIndex < MAX_RAY_REFLECTIONS_COUNT; ++stackIndex){
+        material tempMat;
+        vec3 nextPointO;
+        vec3 nextPointNorm;
+        vec3 nextPointD;
+
+        if( !intersect(PreviousReflectionO, PreviousReflectionD, 
+                MAX_DIST, nextPointO, nextPointNorm, tempMat, false) ){
+            break;
+        }
+
+        nextPointD = reflect(PreviousReflectionD, nextPointNorm);
+
+        bool isInShadow;
+        reflColorStack[stackIndex] = tempMat.color.rgb * GetLight(nextPointO, nextPointNorm, lamp_pos, isInShadow);
+        if(!isInShadow){
+            reflColorStack[stackIndex] = shade(nextPointO, PreviousReflectionD, normalize(lamp_pos - nextPointO), 
+                reflColorStack[stackIndex], tempMat);
+        }
+        reflColorWeight[stackIndex] = lightIntensity* (1 - mat.reflectedPortion);
+        lightIntensity = lightIntensity * mat.reflectedPortion;
+    }
+
+    // Add some lighting code here!
+	vec3 color = vec3(0., 0., 0.);
+    for(int i = 0; i < stackIndex; ++i)
+    {
+        color += reflColorWeight[i] * reflColorStack[i];
+    }
+
+    return color;
+}
+
+vec3 GetSurfaceRefractionColor(vec3 rd, vec3 surfacePt, vec3 surfaceNormal, vec3 lamp_pos,
+    vec3 originalSurfaceColor, material mat)
+{
+    if(!mat.is_transparent)
+        return originalSurfaceColor;
+
+    material tempMat1, tempMat2;
+    vec3 refractDirection = refract(normalize(rd), normalize(surfaceNormal), 1. / mat.refracIndex);
+    vec3 marchingStartPt = surfacePt;
+    vec3 otherSidePt = surfacePt;
+    vec3 otherSideN;    
+
+    if(refractDirection == vec3(0.))
+    {
+        refractDirection = rd;
+    }
+        
+    intersect(marchingStartPt, refractDirection, MAX_DIST, 
+        otherSidePt, otherSideN, tempMat1, true);
+
+    marchingStartPt = otherSidePt;
+    intersect(marchingStartPt , 
+        refractDirection, MAX_DIST, 
+        otherSidePt, otherSideN, tempMat2, false);
+
+    return tempMat2.color.rgb;
+}
+
 /* Calculates the color of the pixel, based on view ray origin and direction.
  *
  * Parameters:
@@ -638,7 +709,6 @@ vec3 render(vec3 ro, vec3 rd)
 {
     // This lamp is positioned at the hole in the roof.
     vec3 lamp_pos = vec3(0.0, 2.7, 3.0);
-
     vec3 firstP, firstN;
     material mat;
 
@@ -648,55 +718,16 @@ vec3 render(vec3 ro, vec3 rd)
     {
         return vec3(0.7, 0.7, 0.7);
     }
-
-    float lightIntensity = 1;
-    const int MAX_DETECTIONS = 2;
-    vec3 colorStack[MAX_DETECTIONS];
-    float colorWeight[MAX_DETECTIONS];
     
     bool isInShadow;
-    colorStack[0] = mat.color.rgb * GetLight(firstP, firstN, lamp_pos, isInShadow);
-    colorWeight[0] = lightIntensity * (1 - mat.reflectedPortion);
+    vec3 color = mat.color.rgb * GetLight(firstP, firstN, lamp_pos, isInShadow);
+    color = GetSurfaceReflectionColor(rd, firstP, firstN, lamp_pos, color, mat);
+    color = GetSurfaceRefractionColor(rd, firstP, firstN, lamp_pos, color, mat);
+
     if(!isInShadow)
 	{
-		colorStack[0] = shade(firstN, rd, normalize(lamp_pos-firstP), colorStack[0], mat);
+		color = shade(firstN, rd, normalize(lamp_pos-firstP), color, mat);
 	}
-
-    lightIntensity = lightIntensity * mat.reflectedPortion;
-    vec3 previousNormal = firstN;
-    vec3 PreviousReflectionO = firstP;
-    vec3 PreviousReflectionD = reflect(rd, firstN);
-    
-    int stackIndex;
-    for(stackIndex = 1; stackIndex < MAX_DETECTIONS && lightIntensity >  0.0; ++stackIndex){
-        material tempMat;
-        vec3 nextPointO;
-        vec3 nextPointNorm;
-        vec3 nextPointD;
-
-        if( !intersect(PreviousReflectionO, PreviousReflectionD, MAX_DIST, nextPointO, nextPointNorm, tempMat, false) ){
-            break;
-        }
-
-        nextPointD = reflect(PreviousReflectionD, nextPointNorm);
-
-        bool isInShadow;
-        colorStack[stackIndex] = tempMat.color.rgb * GetLight(nextPointO, nextPointNorm, lamp_pos, isInShadow);
-        if(!isInShadow){
-            colorStack[stackIndex] = shade(nextPointO, PreviousReflectionD, normalize(lamp_pos - nextPointO), 
-                colorStack[stackIndex], tempMat);
-        }
-        colorWeight[stackIndex] = lightIntensity* (1 - mat.reflectedPortion);
-        lightIntensity = lightIntensity * mat.reflectedPortion;
-    }
-
-    // Add some lighting code here!
-	vec4 color = vec4(0., 0., 0., 1.0);//mat.color.rgb * GetLight(p, n, lamp_pos, isInShadow)
-    
-    for(int i = 0; i < stackIndex; ++i)
-    {
-        color.rgb += colorWeight[i] * colorStack[i];
-    }
 
     return color.xyz;
 }
