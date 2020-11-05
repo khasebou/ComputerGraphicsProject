@@ -286,13 +286,13 @@ float sphere_distance(vec3 p, vec3 pos, float radius)
 material sphere_material(vec3 p)
 {
     material mat;
-    mat.color = vec4(0.1, 0.5, 0.0, 1.0);
+    mat.color = vec4(0.1, 0.1, 0.1, 1.0);
 
-	mat.use_phong_shading = false;
-    mat.shininess = 0.2;
-    mat.specular_intensity = 0.7;
+	mat.use_phong_shading = true;
+    mat.shininess = 30;
+    mat.specular_intensity = 0.5;
     mat.diffuse_intensity = 0.5;
-    mat.diffuse = vec3(0.1, 0.2, 0.0);
+    mat.diffuse = vec3(1.0, 1.0, 1.0);
     mat.specular = vec3(1.0, 1.0, 1.0);
     mat.reflectedPortion = 0.0f;
     mat.is_transparent = true;
@@ -369,7 +369,7 @@ material room_material(vec3 p)
     mat.specular_intensity = 0.288;
     mat.diffuse_intensity = 0.5;
     mat.specular = vec3(0.8,0.8,0.8);
-    mat.reflectedPortion = 0.2f;
+    mat.reflectedPortion = 0.3f;
     mat.is_transparent = false;
 
     if(p.y < -2.98){
@@ -674,26 +674,25 @@ vec3 GetSurfaceRefractionColor(vec3 rd, vec3 surfacePt, vec3 surfaceNormal, vec3
     if(!mat.is_transparent)
         return originalSurfaceColor;
 
+    int count = 0;
+    const int MAX_ITERATIONS = 3;
     material tempMat1, tempMat2;
-    vec3 refractDirection = refract(normalize(rd), normalize(surfaceNormal), 1. / mat.refracIndex);
-    vec3 marchingStartPt = surfacePt;
-    vec3 otherSidePt = surfacePt;
-    vec3 otherSideN;    
 
-    if(refractDirection == vec3(0.))
-    {
-        refractDirection = rd;
-    }
-        
-    intersect(marchingStartPt, refractDirection, MAX_DIST, 
-        otherSidePt, otherSideN, tempMat1, true);
+    vec3 rayDir = rd;
+    vec3 currentSurfaceNorm = surfaceNormal;
+    vec3 currentSurfacePoint = surfacePt;
+    vec3 nextPt, nextPtNormal, nextRayDir;
+    
+    do{
+        nextRayDir = refract( normalize(rayDir), normalize(currentSurfaceNorm), 1. / mat.refracIndex);
+        intersect(currentSurfacePoint, nextRayDir, MAX_DIST, nextPt, nextPtNormal, tempMat1, true);
 
-    marchingStartPt = otherSidePt;
-    intersect(marchingStartPt , 
-        refractDirection, MAX_DIST, 
-        otherSidePt, otherSideN, tempMat2, false);
+        rayDir = nextRayDir;
+        currentSurfacePoint = nextPt + normalize(nextRayDir) * 0.1;
+        currentSurfaceNorm = nextPtNormal;
+    }while(++count < MAX_ITERATIONS && tempMat1.is_transparent);
 
-    return tempMat2.color.rgb;
+    return tempMat1.color.rgb;
 }
 
 /* Calculates the color of the pixel, based on view ray origin and direction.
