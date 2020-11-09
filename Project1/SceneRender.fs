@@ -38,7 +38,7 @@
 //   Advanced own SDF             |    | 
 //   Animated SDF                 |    | 
 //   Other?                       |    | 
-//   BLOOM                        | X  |
+//   BLOOM                        | X  | Enable by pressing 'R' in the demo
 //   OWN shader                   | X  |
 //   Extra basic shape TORUS      | X  |
 //   Animated Shape (smooth union)| X  |
