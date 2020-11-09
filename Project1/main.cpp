@@ -25,6 +25,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void processInput(GLFWwindow* window);
 void RenderingOptionsButtonHandler(GLFWwindow* window, int key, int scancode, int action, int mods);
 
+bool use_bloom = false;
 bool use_soft_shadows = false;
 bool firstTimeMouseFocusOnWindow = true;
 float yaw = 0;	
@@ -249,11 +250,11 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         BloomShader.use();
         BloomShader.setVec2("u_resolution", u_resolution);
+        BloomShader.setBool("use_bloom", use_bloom);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, colorBuffers[0]);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[!horizontal]);
-        BloomShader.setFloat("exposure", exposure);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         // update image on screen and get new inputs
@@ -302,6 +303,10 @@ void RenderingOptionsButtonHandler(GLFWwindow* window, int key, int scancode, in
     if (key == GLFW_KEY_E && action == GLFW_PRESS)
     {
         use_soft_shadows = !use_soft_shadows;
+    }
+    else if (key == GLFW_KEY_R && action == GLFW_PRESS)
+    {
+        use_bloom = !use_bloom;
     }
 }
 

@@ -7,7 +7,7 @@ uniform vec2 u_resolution;
 
 uniform sampler2D scene;
 uniform sampler2D bloomBlur;
-uniform float exposure;
+uniform bool use_bloom;
 
 void main()
 {             
@@ -15,13 +15,11 @@ void main()
 
     const float gamma = 2.2;
     vec3 hdrColor = texture(scene, uv).rgb;      
-    vec3 bloomColor = texture(bloomBlur, uv).rgb;
     
-    hdrColor += bloomColor; // additive blending
-    // tone mapping
-    //vec3 result = vec3(1.0) - exp(-hdrColor * 0.6);
-    // also gamma correct while we're at it       
-    //result = pow(result, vec3(1.0 / gamma));
+    if(use_bloom){
+        vec3 bloomColor = texture(bloomBlur, uv).rgb;
+        hdrColor += bloomColor; 
+    }
     
     FragColor = vec4(hdrColor, 1.0);
 }

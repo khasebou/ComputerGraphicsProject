@@ -24,7 +24,7 @@
 //   Soft shadows                 |  X |  Enable by pressing 'E' in the demo
 //   Sharp reflections            |    | 
 //   Glossy reflections           |  X | 
-//   Refractions                  |  - | 
+//   Refractions                  |  X | 
 //   Caustics                     |    | 
 //   SDF Ambient Occlusions       |    | 
 //   Texturing                    |  x | 
@@ -349,10 +349,10 @@ vec3 drawFractal(float k, vec2 point , vec2 canvasArea)
 
 float room_distance(vec3 p)
 {
-    return max(
-        -box(p-vec3(0.0,3.1,3.0), vec3(0.5, 0.5, 0.5)),
-        -box(p-vec3(0.0,0.0,0.0), vec3(6.0, 3.0, 6.0))
-    );
+    return //max(
+        //-box(p-vec3(0.0,3.1,3.0), vec3(0.5, 0.5, 0.5)),
+        -box(p-vec3(0.0,0.0,0.0), vec3(6.0, 3.0, 6.0));
+    //);
 }
 
 material room_material(vec3 p)
@@ -387,6 +387,8 @@ material room_material(vec3 p)
         vec2 relativePoint = (p - fract_start).xy;
         vec2 area = fract_end.xy - fract_start.xy;
         mat.color = vec4(drawFractal(2., relativePoint, area), 1.);
+    }else if(abs(p.x) <= 0.5 && p.y >= 2.98 && abs(p.z - 3.) <= 0.5){
+        mat.color = vec4(0.9, 0.9, 0.9, 1.);
     }
     
     mat.diffuse = mat.color.xyz;
@@ -716,6 +718,12 @@ vec3 render(vec3 ro, vec3 rd)
     {
         return vec3(0.7, 0.7, 0.7);
     }
+
+    // for small patch in ceiling, don't shade this is square representing light
+    if(abs(firstP.x) <= 0.5 && firstP.y >= 2.98 && abs(firstP.z - 3.) <= 0.5)
+    {
+        return vec3(5.);
+    }
     
     bool isInShadow;
     vec3 color = mat.color.rgb ;// 
@@ -749,7 +757,7 @@ void main()
 
     FragColor = vec4(render(cameraPos, rd), 1.0);
 
-    if(dot(FragColor.rgb, vec3(0.2126, 0.7152, 0.0722)) > 1)
+    if(dot(FragColor.rgb, vec3(0.1, 0.1, 0.1)) >= 1)
     {
         BrightColor = vec4(FragColor.rgb, 1.0);
     }else{
