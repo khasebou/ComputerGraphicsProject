@@ -1,6 +1,8 @@
-Prebuilt debug exe can be found under x64\Debug folder:
+1) Features Implemented are listed in SceneRenderer.fs
 
-This project requires the following libraries and all libraries have been included in 'required libraries' folder
+2) Prebuilt debug exe can be found under x64\Debug folder:
+
+3) This project requires the following libraries and all libraries have been included in 'required libraries' folder
 
 GLM: To add this, open project settings -> C/C++ -> General: add the path to glm in 'Additional include directories'
 Example Path: C:\Users\karim\Downloads\glm-0.9.9.8\glm\
