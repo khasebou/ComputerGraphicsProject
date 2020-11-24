@@ -9,6 +9,9 @@
 #include <sstream>
 #include <iostream>
 
+// This class has been obtained from
+// https://learnopengl.com/Getting-started/Textures, it is used exclusively to make it easy to transfer
+// objects from cpu memory to gpu memory
 class Shader
 {
 public:

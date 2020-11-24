@@ -19,25 +19,10 @@
 //   Camera movement and rotation | X  |  'rotation using mouse and movement WSAD keys' though movement direction does not take into consideration camera orientation (IE W will always move in Z direction regardless of camera orientation)
 //   Sharp shadows                | X  | 
 // Extra functionalities --------------------------------------------------------
-//   Tone mapping                 |    | 
-//   PBR shading                  |    | 
 //   Soft shadows                 |  X |  Enable by pressing 'E' in the demo
-//   Sharp reflections            |    | 
-//   Glossy reflections           |  X | 
+//   Sharp reflections            |  X | 
 //   Refractions                  |  X | 
-//   Caustics                     |    | 
-//   SDF Ambient Occlusions       |    | 
 //   Texturing                    |  x | 
-//   Simple game                  |    | 
-//   Progressive path tracing     |    | 
-//   Basic post-processing        |    | 
-//   Advanced post-processing     |    | 
-//   Screen space reflections     |    | 
-//   Screen space AO              |    | 
-//   Simple own SDF               |    | 
-//   Advanced own SDF             |    | 
-//   Animated SDF                 |    | 
-//   Other?                       |    | 
 //   BLOOM                        | X  | Enable by pressing 'R' in the demo
 //   OWN shader                   | X  |
 //   Extra basic shape TORUS      | X  |
@@ -225,6 +210,9 @@ float box_distance( vec3 p, vec3 loc, vec3 b )
     return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
 }
 
+
+// used art of code tutorial for custom shapes:
+// https://www.youtube.com/watch?v=Ff0jJyyiVyw&t=893s
 float torus_distance( vec3 p )
 {
     vec2 t = vec2(0.8,0.2);
@@ -235,6 +223,8 @@ float torus_distance( vec3 p )
     return length(q)-t.y;
 }
 
+// used art of code tutorial for custom shapes:
+// https://www.youtube.com/watch?v=Ff0jJyyiVyw&t=893s
 material torus_material(vec3 p)
 {
     material mat;
@@ -297,7 +287,8 @@ material sphere_material(vec3 p)
     return mat;
 }
 
-
+// used art of code video on ray marching simple shapes as reference
+// https://www.youtube.com/watch?v=AfKGMUDWfuE&list=PLGmrMu-IwbgtMxMiV3x4IrHPlPmg7FD-P&index=3
 float animated_box(vec3 p, vec3 loc, float stepSize)
 {
     float d = 1e10;
@@ -319,6 +310,7 @@ vec2 cpow( vec2 z, float n ) {
     return pow( r, n )*vec2( cos(a*n), sin(a*n) ); 
 }
 
+// used https://iquilezles.org/www/articles/mset_1bulb/mset1bulb.htm as a reference for implementing the fractal
 vec3 drawFractal(float k, vec2 point , vec2 canvasArea)
 {
     vec3 col = vec3(0.0);
@@ -607,6 +599,8 @@ vec3 shade(vec3 n, vec3 rd, vec3 ld, vec3 color, material mat){
     return 0.5 * color + diffuse + spec;
 }
 
+// used https://blog.demofox.org/2017/01/09/raytracing-reflection-refraction-fresnel-total-internal-reflection-and-beers-law/ as
+// reference for understanding how to compute light motion within glass
 vec3 GetSurfaceRefractionColor(vec3 rd, vec3 surfacePt, vec3 surfaceNormal, vec3 lamp_pos,
     vec3 originalSurfaceColor, material mat)
 {
@@ -719,7 +713,7 @@ vec3 render(vec3 ro, vec3 rd)
         return vec3(0.7, 0.7, 0.7);
     }
 
-    // for small patch in ceiling, don't shade this is square representing light
+    // for small patch in ceiling, this is a square representing light
     if(abs(firstP.x) <= 0.5 && firstP.y >= 2.98 && abs(firstP.z - 3.) <= 0.5)
     {
         return vec3(5.);
@@ -744,6 +738,8 @@ uniform vec3 cameraRotation;
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec4 BrightColor;
 
+// watched video by art of code to understand how raymaching works and implement perspective mapping
+// https://www.youtube.com/watch?v=PGtv-dBi2wE&t=2s
 void main()
 {   
     // This is the position of the pixel in normalized device coordinates.

@@ -2,12 +2,14 @@
 
 #include <iostream>
 
+
 unsigned int loadTexture(std::string imagePath, bool& success)
 {
     unsigned int textureID;
     glGenTextures(1, &textureID);
 
     int width, height, nrComponents;
+    // this function has been obtained from https://learnopengl.com/Getting-started/Textures
     unsigned char* data = stbi_load(imagePath.c_str(), &width, &height, &nrComponents, 0);
     if (data)
     {

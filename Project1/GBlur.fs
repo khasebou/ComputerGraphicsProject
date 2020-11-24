@@ -7,6 +7,7 @@ uniform sampler2D image;
 uniform bool horizontal;
 uniform float weight[5] = float[] (0.2270270270, 0.1945945946, 0.1216216216, 0.0540540541, 0.0162162162);
 
+// I used https://learnopengl.com/Advanced-Lighting/Bloom to learn about what bloom filtering is and how to implement it
 void main()
 {             
     vec2 TexCoords = (gl_FragCoord.xy/u_resolution);

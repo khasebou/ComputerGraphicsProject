@@ -9,6 +9,7 @@ uniform sampler2D scene;
 uniform sampler2D bloomBlur;
 uniform bool use_bloom;
 
+// I used https://learnopengl.com/Advanced-Lighting/Bloom to learn about what bloom filtering is and how to implement it
 void main()
 {             
     vec2 uv = (gl_FragCoord.xy/u_resolution);
