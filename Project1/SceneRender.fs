@@ -5,7 +5,7 @@
 // COMP.CE.430 Computer Graphics Coding Assignment 2020
 //
 // Write your name and student id here:
-//   example name, H123456
+//   KARIM HASEBOU, 050366668
 //
 // Mark here with an X which functionalities you implemented.
 // Note that different functionalities are worth different amount of points.
