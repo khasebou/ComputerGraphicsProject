@@ -250,7 +250,7 @@ float blob_distance(vec3 p)
 material blob_material(vec3 p)
 {
     material mat;
-    mat.color = vec4(0.0, 0.0, 0.0, 1.0);
+    mat.color = vec4(.3, 0.65, 0.1, 1.0);
     
     mat.shininess = 0.2;
     mat.specular_intensity = 0.288;
@@ -260,7 +260,7 @@ material blob_material(vec3 p)
     mat.reflectedPortion = 0.0f;
     mat.refracIndex =  1.125;
     mat.colorAbsorbtion = vec3(8.0, 2.0, 0.1);
-    mat.is_transparent = true;
+    mat.is_transparent = false;
 
     return mat;
 }
